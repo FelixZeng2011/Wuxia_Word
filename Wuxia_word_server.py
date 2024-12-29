@@ -1,7 +1,7 @@
+import random
 import socket
 import threading
 
-# 玩家信息类
 class Player:
     def __init__(self, name):
         self.name = name
@@ -12,7 +12,20 @@ class Player:
         self.hp = self.max_hp
         self.attack = 10
 
-# 处理客户端连接的函数
+    def attack_enemy(self, enemy):
+        damage = random.randint(self.attack - 5, self.attack + 5)
+        enemy.hp -= damage
+        if enemy.hp <= 0:
+            enemy.hp = 0
+            print(f"{self.name} 击败了 {enemy.name}!")
+        else:
+            print(f"{self.name} 对 {enemy.name} 造成了 {damage} 点伤害! {enemy.name} 还剩下 {enemy.hp} 点生命值。")
+
+    def defend(self):
+        defense = random.randint(5, 10)
+        print(f"{self.name} 进行了防御，增加了 {defense} 点防御力!")
+        self.combat_power += defense
+
 def handle_client(conn, addr, players):
     # 接收玩家创建的角色名
     name = conn.recv(1024).decode()
@@ -38,10 +51,21 @@ def handle_client(conn, addr, players):
                     break
             if opponent:
                 conn.sendall(f"你与 {opponent.name} 进入战斗！".encode())
+                while player.hp > 0 and opponent.hp > 0:
+                    player.attack_enemy(opponent)
+                    player.defend()
+                    if opponent.hp > 0:
+                        opponent.attack_enemy(player)
+                if player.hp <= 0:
+                    conn.sendall(f"你被 {opponent.name} 击败了！".encode())
+                else:
+                    conn.sendall(f"你击败了 {opponent.name}！".encode())
             else:
                 conn.sendall("暂时没有其他玩家可战斗。".encode())
         else:
             conn.sendall("无效的指令，请重新输入。".encode())
+
+    players.
 
 # 启动服务器
 def start_server():
