@@ -27,6 +27,47 @@ def receive_json_message(conn):
     print(message)
     return message
 
+def retrieve_hero(client):
+    send_json_message(client, {"message": "请求存档"})
+    data = receive_json_message(client)
+    message = data.get("message")
+    if message == "没有存档":
+        name = input("请输入您的角色名：")
+        send_json_message(client, {"name": name})
+    else:
+        curr_name = data.get("name")
+        if curr_name is not None:
+            print("已创建角色：" + curr_name + "，请选择：")
+            print("继续该角色(1)")
+            print("创建新角色(2)")
+            operation = input_and_check("", check_list=["1", "2"])
+            if operation == "2":
+                name = input_and_check("请输入您的角色名：", unexpected_list=[curr_name])
+                send_json_message(client, {"name": name})
+            else:
+                send_json_message(client, {"message": "继续该角色"})
+                data = receive_json_message(client)
+                curr_player = data.get("player_info")
+                if curr_player is not None:
+                    print("角色信息：")
+                    print(curr_player)
+        else:
+            print("收到未知消息：%s, 来自: %s" % (data, addr))
+
+def get_battle_messages(client):
+    while True:
+        data = receive_json_message(client)
+        message = data.get("message")
+        if message is not None:
+            print(message)
+        else:
+            end_message = data.get("battle_end")
+            if end_message is not None:
+                print(end_message)
+                break
+            else:
+                print("收到未知消息：%s, 来自: %s" % (data, addr))
+
 # 连接服务器
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
@@ -41,43 +82,23 @@ except:
     print("连接服务器失败!")
     exit()
 
-send_json_message(client, {"message": "请求存档"})
-data = receive_json_message(client)
-message = data.get("message")
-if message == "没有存档":
-    name = input("请输入您的角色名：")
-    send_json_message(client, {"name": name})
-else:
-    curr_name = data.get("name")
-    if curr_name is not None:
-        print("已创建角色：" + curr_name + "，请选择：")
-        print("1. 继续该角色")
-        print("2. 创建新角色")
-        operation = input_and_check("", check_list=["1", "2"])
-        if operation == "2":
-            name = input_and_check("请输入您的角色名：", unexpected_list=[curr_name])
-            send_json_message(client, {"name": name})
-        else:
-            send_json_message(client, {"message": "继续该角色"})
-            data = receive_json_message(client)
-            curr_player = data.get("player_info")
-            if curr_player is not None:
-                print("角色信息：")
-                print(curr_player)
-    else:
-        print("收到未知消息：%s, 来自: %s" % (data, addr))
+retrieve_hero(client)
 
-'''while True:
+while True:
     print("请输入操作：")
-    print("1. 接任务（输入'task'）")
-    print("2. 战斗（输入'battle'）")
-    print("3. 退出（输入'quit'）")
+    print("接任务（输入'1'）")
+    print("战斗（输入'2'）")
+    print("退出（输入'q'）")
     operation = input()
-    client.sendall(operation.encode())
-    data = client.recv(1024).decode()
-    print(data)
-    if operation == 'quit':
-        break'''
+    send_json_message(client, {"message": operation})
+
+    if operation == 'q':
+        break
+    elif operation == '1':
+        data = receive_json_message(client)
+        print(data)
+    elif operation == '2':
+        get_battle_messages(client)
 
 send_json_message(client, {"message": "client close"})
 client.close()
