@@ -1,7 +1,8 @@
 import socket
 import json
 
-def input_and_check(prompt, check_func = None, check_list = None, unexpected_list = None):
+
+def input_and_check(prompt, check_func=None, check_list=None, unexpected_list=None):
     while True:
         input_str = input(prompt)
         if check_func is not None:
@@ -13,19 +14,24 @@ def input_and_check(prompt, check_func = None, check_list = None, unexpected_lis
         elif unexpected_list is not None:
             if input_str not in unexpected_list:
                 return input_str
-        
+
         print("输入有误，请重新输入!")
+
 
 def send_json_message(conn, data):
     message = json.dumps(data).encode('utf-8')
     conn.sendall(message)
 
+
 def receive_json_message(conn):
-    print("收到消息：")
     data = conn.recv(1024)
-    message = json.loads(data.decode('utf-8'))
-    print(message)
-    return message
+    try:
+        message = json.loads(data.decode('utf-8'))
+        print("收到消息：")
+        print(message)
+        return message
+    except Err:
+        print(Err)
 
 def retrieve_hero(client):
     send_json_message(client, {"message": "请求存档"})
@@ -47,12 +53,13 @@ def retrieve_hero(client):
             else:
                 send_json_message(client, {"message": "继续该角色"})
                 data = receive_json_message(client)
-                curr_player = data.get("player_info")
+                curr_player = data.get("name")
                 if curr_player is not None:
                     print("角色信息：")
                     print(curr_player)
         else:
             print("收到未知消息：%s, 来自: %s" % (data, addr))
+
 
 def get_battle_messages(client):
     while True:
@@ -67,6 +74,7 @@ def get_battle_messages(client):
                 break
             else:
                 print("收到未知消息：%s, 来自: %s" % (data, addr))
+
 
 # 连接服务器
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
