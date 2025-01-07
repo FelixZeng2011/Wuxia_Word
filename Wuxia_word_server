@@ -2,18 +2,53 @@ import socket
 import threading
 import json
 import random
+import os
+import time
 
 # 玩家信息类
 class Player:
     def __init__(self, name):
         self.name = name
         self.level = 1
-        self.experience = 0
+        self.exp = 0
         self.exp_for_next_level = 100
-        self.max_hp = 100
+        self.max_hp = 300
         self.hp = self.max_hp
         self.attack = 30
         self.speed = 5
+
+def save_game():
+    file_data = []
+    for data in players:
+        player = data['player']
+        addr = data['addr']
+        player_data = {'name': player.name,
+                       'level': player.level,
+                       'exp': player.exp,
+                       'max_hp': player.max_hp,
+                       'attack': player.attack,
+                       'speed': player.speed}
+        file_data.append({'addr': addr, 'player': player_data})
+    with open("players_data.json", "w", encoding='utf-8') as file:
+        json.dump(file_data, file, ensure_ascii=False, indent=4)
+
+def load_game():
+    if not os.path.exists("players_data.json"):
+        return
+    try:
+        with open("players_data.json", "r", encoding='utf-8') as file:
+            data = json.load(file)
+        for item in data:
+            player_data = item['player']
+            player = Player(player_data['name'])
+            player.level = player_data['level']
+            player.exp = player_data['exp']
+            player.max_hp = player_data['max_hp']
+            player.attack = player_data['attack']
+            player.speed = player_data['speed']
+            players.append({'addr':item['addr'], 'player':player})
+    except:
+        print("读档失败！")
 
 def find_list_as_key(List, KeyName, KeyValue):
     for item in List:
@@ -53,6 +88,7 @@ def handle_message(message_dict, conn, client):
     elif StrMsg == "2":
         current_dict = find_list_as_key(players, "addr", ip_addr)
         start_battle(conn, client, current_dict["player"])
+        save_game()
     else:
         name = message_dict.get("name")
         if name is not None:
@@ -65,8 +101,9 @@ def handle_message(message_dict, conn, client):
             current_player = player
             print("新创建角色"+name)
             print(players)
+            save_game()
         else:
-            print("收到未知消息：%s, 来自: %s" % (message_dict, addr))
+            print("收到未知消息：%s, 来自: %s" % (message_dict, client))
         
 def start_battle(conn, client, player):
     if player is None:
@@ -107,8 +144,10 @@ def one_round(conn, client, player, opponent):
         second = player
 
     attack(conn, client, first, second)
+    time.sleep(1)
     if second.hp > 0:
         attack(conn, client, second, first)
+        time.sleep(1)
 
 def attack(conn, client, attacker, defender):
     attack = attacker.attack
@@ -128,12 +167,11 @@ def get_opponent(player):
             return opponent["player"]
     return None
 
-# 处理客户端连接的函数
+# obsolete
 def handle_client(conn, addr, players):
-
     while True:
         message = receive_json_message(conn)
-        result = handle_message(message, conn, addr, players)
+        result = handle_message(message, conn, addr)
         if result == "client close" or result == "q":
             break
 
@@ -189,7 +227,9 @@ def start_server():
         else:
             if client in client_list:
                 handle_message(message, server, client)
+        save_game()
 
 if __name__ == "__main__":
     players = []
+    load_game()
     start_server()
